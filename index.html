@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Surprise For My Love | Physics Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;700&family=Mali:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background: #fffafa;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        .font-cute { font-family: 'Mali', cursive; }
+        
+        /* Gift Box */
+        .box-lid { transition: all 1s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .box-open .box-lid { 
+            transform: translateY(-400px) rotate(20deg); 
+            opacity: 0; 
+        }
+        .box-body { transition: transform 0.5s; }
+        .box-open .box-body { transform: scale(1.05); }
+
+        /* Floating Pop Text */
+        .pop-indicator {
+            position: fixed;
+            pointer-events: none;
+            z-index: 100;
+            font-weight: bold;
+            color: #ff4d6d;
+            animation: floatUpAndFade 1s forwards;
+        }
+
+        @keyframes floatUpAndFade {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+
+        .summary-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border: 2px solid #ffe4e6;
+            max-height: 90vh;
+        }
+
+        /* Rarity Styles */
+        .rarity-legendary { background: linear-gradient(to right, #f59e0b, #fbbf24); color: white; }
+        .rarity-rare { background: linear-gradient(to right, #8b5cf6, #a78bfa); color: white; }
+        .rarity-common { background: #f3f4f6; color: #6b7280; }
+        
+        /* Physics Elements */
+        .balloon-obj {
+            position: absolute;
+            will-change: transform;
+            z-index: 50;
+            cursor: pointer;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- STEP 0: PASSCODE -->
+    <div id="step-0" class="fixed inset-0 z-[100] flex items-center justify-center bg-rose-500 transition-opacity duration-500">
+        <div class="text-center p-8 bg-white rounded-[2.5rem] shadow-2xl mx-4 animate__animated animate__zoomIn">
+            <h2 class="text-rose-600 text-2xl font-bold mb-6 font-cute">รหัสผ่านยืนยันความรัก</h2>
+            <input type="tel" maxlength="4" id="pin-input" class="w-full p-4 text-center text-3xl tracking-[0.5em] rounded-2xl bg-rose-50 border-2 border-rose-200 text-rose-600 font-bold mb-4 focus:outline-none" placeholder="****">
+            <p class="text-rose-300 text-sm mb-6">คำใบ้: วันครบรอบ (เช่น 1402)</p>
+            <button onclick="checkPasscode()" class="w-full py-4 bg-rose-500 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-transform">เข้าสู่ระบบหัวใจ 🔓</button>
+        </div>
+    </div>
+
+    <!-- STAGE AREA -->
+    <div id="main-stage" class="hidden flex-1 relative flex flex-col justify-end items-center pb-10">
+        <h2 id="top-msg" class="absolute top-20 text-rose-400 font-bold text-xl animate__animated animate__fadeIn">จิ้มลูกโป่งให้ทันนะ!</h2>
+        
+        <!-- Bottom Gift Box -->
+        <div id="gift-container" class="relative z-20 cursor-pointer mb-4" onclick="burstBalloons()">
+            <div id="box-lid" class="box-lid relative z-30">
+                <div class="w-28 h-8 bg-rose-500 rounded-t-lg mx-auto border-b-2 border-rose-600 relative">
+                    <div class="absolute -top-4 left-1/2 -translate-x-1/2 flex">
+                        <div class="w-8 h-8 border-2 border-rose-400 rounded-full"></div>
+                        <div class="w-8 h-8 border-2 border-rose-400 rounded-full -ml-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="box-body w-28 h-28 bg-rose-600 rounded-b-lg shadow-2xl mx-auto flex items-center justify-center relative">
+                <div class="w-4 h-full bg-rose-400 absolute"></div>
+                <div class="h-4 w-full bg-rose-400 absolute"></div>
+                <span id="click-hint" class="text-white text-xs font-bold animate-pulse z-10 text-center">แตะเพื่อเปิด</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- BALLOON AREA -->
+    <div id="balloon-area" class="fixed inset-0 pointer-events-none"></div>
+
+    <!-- SUMMARY SECTION -->
+    <div id="summary-screen" class="fixed inset-0 z-[150] hidden items-center justify-center bg-rose-100/80 backdrop-blur-md p-4">
+        <div class="summary-card w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl animate__animated animate__fadeInUp flex flex-col">
+            <div class="text-center mb-4 shrink-0">
+                <div class="text-4xl mb-1">🏆</div>
+                <h2 class="text-2xl font-bold text-gray-800 font-cute">สรุปรางวัลทั้งหมด</h2>
+                <p class="text-rose-400 text-sm">ระบบตรวจสอบความโชคดีเสร็จสิ้น!</p>
+            </div>
+            
+            <div id="prize-list" class="space-y-2 mb-6 overflow-y-auto pr-1">
+                <!-- Prizes will be listed here -->
+            </div>
+
+            <div class="text-center shrink-0 border-t pt-4">
+                <p class="text-gray-400 text-[10px] italic mb-4">สุ่มโดยระบบความรักอัตโนมัติ 100%</p>
+                <button onclick="location.reload()" class="w-full py-4 bg-rose-500 text-white font-bold rounded-2xl shadow-lg shadow-rose-200">เริ่มสุ่มใหม่ 💖</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PIN = "1402";
+        let hasOpened = false;
+        let balloonsSpawned = 25;
+        let balloonsProcessed = 0;
+        let prizesWon = [];
+        let activeBalloons = [];
+
+        const prizePool = {
+            legendary: { name: "เงินสด 1,000 บาท", icon: "💰", chance: 0.03, type: "Legendary" },
+            rare: [
+                { name: "บุฟเฟต์ปิ้งย่าง", icon: "🥓", type: "Rare" },
+                { name: "ตั๋วหนัง 2 ที่นั่ง", icon: "🎬", type: "Rare" },
+                { name: "ตุ๊กตาหมีตัวใหญ่", icon: "🧸", type: "Rare" }
+            ],
+            common: [
+                { name: "หอมแก้ม 1 ที", icon: "💋", type: "Common" },
+                { name: "นวดไหล่ 15 นาที", icon: "💆‍♀️", type: "Common" },
+                { name: "ตามใจ 1 วัน", icon: "👑", type: "Common" },
+                { name: "กอดแน่นๆ", icon: "🫂", type: "Common" },
+                { name: "พาไปกินของอร่อย", icon: "🍦", type: "Common" }
+            ]
+        };
+
+        function checkPasscode() {
+            const val = document.getElementById('pin-input').value;
+            if(val === PIN) {
+                document.getElementById('step-0').classList.add('opacity-0');
+                setTimeout(() => {
+                    document.getElementById('step-0').style.display = 'none';
+                    document.getElementById('main-stage').classList.remove('hidden');
+                }, 500);
+            } else {
+                document.getElementById('pin-input').value = '';
+                document.getElementById('pin-input').placeholder = "รหัสผิด!";
+            }
+        }
+
+        // Physics Constants
+        const GRAVITY = -0.05; // Negative to float up
+        const FRICTION = 0.985;
+        const BOUNCE = 0.7;
+
+        function burstBalloons() {
+            if(hasOpened) return;
+            hasOpened = true;
+
+            document.getElementById('gift-container').classList.add('box-open');
+            document.getElementById('click-hint').style.display = 'none';
+            document.getElementById('top-msg').innerText = "กดแตกให้ได้เยอะที่สุด!";
+
+            const colors = ['#ff4d6d', '#ff758f', '#ffb3c1', '#74c0fc', '#ffea00', '#63e6be', '#b197fc'];
+            
+            for(let i=0; i<balloonsSpawned; i++) {
+                setTimeout(() => {
+                    spawnBalloon(colors[i % colors.length]);
+                }, i * 150);
+            }
+
+            requestAnimationFrame(updatePhysics);
+        }
+
+        function spawnBalloon(color) {
+            const bEl = document.createElement('div');
+            bEl.className = 'balloon-obj pointer-events-auto';
+            bEl.innerHTML = `
+                <svg width="60" height="80" viewBox="0 0 60 80">
+                    <ellipse cx="30" cy="30" rx="28" ry="32" fill="${color}" />
+                    <path d="M30 62 L30 80" stroke="#ccc" stroke-width="1" />
+                    <polygon points="30,62 27,65 33,65" fill="${color}" />
+                </svg>
+            `;
+            
+            const startX = window.innerWidth / 2 - 30;
+            const startY = window.innerHeight - 150;
+            
+            document.getElementById('balloon-area').appendChild(bEl);
+
+            const bObj = {
+                el: bEl,
+                x: startX,
+                y: startY,
+                vx: (Math.random() - 0.5) * 15, // Burst power
+                vy: -Math.random() * 10 - 5,
+                width: 60,
+                height: 80,
+                color: color,
+                isPopped: false,
+                wobble: Math.random() * Math.PI * 2
+            };
+
+            bEl.onclick = (e) => pop(bObj, e);
+            activeBalloons.push(bObj);
+        }
+
+        function updatePhysics() {
+            const screenWidth = window.innerWidth;
+            
+            activeBalloons.forEach((b, index) => {
+                if(b.isPopped) return;
+
+                // Physics logic
+                b.vy += GRAVITY;
+                b.vx *= FRICTION;
+                
+                // Floating wobble
+                b.wobble += 0.05;
+                b.x += b.vx + Math.sin(b.wobble) * 0.5;
+                b.y += b.vy;
+
+                // Wall Collision
+                if (b.x <= 0) {
+                    b.x = 0;
+                    b.vx = -b.vx * BOUNCE;
+                } else if (b.x + b.width >= screenWidth) {
+                    b.x = screenWidth - b.width;
+                    b.vx = -b.vx * BOUNCE;
+                }
+
+                // Apply to DOM
+                b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+
+                // Out of screen (top)
+                if (b.y < -150) {
+                    b.isPopped = true;
+                    b.el.remove();
+                    countProcessed();
+                }
+            });
+
+            if (balloonsProcessed < balloonsSpawned) {
+                requestAnimationFrame(updatePhysics);
+            }
+        }
+
+        function pop(bObj, event) {
+            if(bObj.isPopped) return;
+            bObj.isPopped = true;
+            bObj.el.style.pointerEvents = 'none';
+            
+            const rand = Math.random();
+            let prize;
+            if(rand < prizePool.legendary.chance) {
+                prize = prizePool.legendary;
+                confetti({ particleCount: 40, spread: 50, origin: { x: event.clientX/window.innerWidth, y: event.clientY/window.innerHeight } });
+            } else if(rand < 0.20) {
+                prize = prizePool.rare[Math.floor(Math.random()*prizePool.rare.length)];
+            } else {
+                prize = prizePool.common[Math.floor(Math.random()*prizePool.common.length)];
+            }
+
+            prizesWon.push(prize);
+
+            // Mini Pop Indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'pop-indicator';
+            indicator.style.left = event.clientX + 'px';
+            indicator.style.top = event.clientY + 'px';
+            indicator.innerHTML = `<span class="text-xl">${prize.icon}</span>`;
+            document.body.appendChild(indicator);
+            setTimeout(() => indicator.remove(), 1000);
+
+            bObj.el.innerHTML = '<span class="text-3xl animate__animated animate__zoomOut">💥</span>';
+            setTimeout(() => {
+                bObj.el.remove();
+                countProcessed();
+            }, 200);
+        }
+
+        function countProcessed() {
+            balloonsProcessed++;
+            if(balloonsProcessed >= balloonsSpawned) {
+                setTimeout(showSummary, 1200);
+            }
+        }
+
+        function showSummary() {
+            const screen = document.getElementById('summary-screen');
+            const list = document.getElementById('prize-list');
+            list.innerHTML = "";
+
+            if(prizesWon.length === 0) {
+                list.innerHTML = `<p class="text-center text-gray-400 py-10 font-cute">จิ้มไม่ทันเลยหรอเนี่ย! 🥺</p>`;
+            } else {
+                const summary = prizesWon.reduce((acc, curr) => {
+                    if (!acc[curr.name]) {
+                        acc[curr.name] = { ...curr, count: 0 };
+                    }
+                    acc[curr.name].count++;
+                    return acc;
+                }, {});
+
+                const sortedPrizes = Object.values(summary).sort((a, b) => {
+                    const order = { "Legendary": 1, "Rare": 2, "Common": 3 };
+                    return order[a.type] - order[b.type];
+                });
+
+                sortedPrizes.forEach(prize => {
+                    const item = document.createElement('div');
+                    item.className = "flex items-center justify-between p-3 bg-white rounded-2xl border border-gray-100 shadow-sm transition-transform active:scale-95";
+                    
+                    let rarityClass = "rarity-common";
+                    if (prize.type === "Legendary") rarityClass = "rarity-legendary";
+                    if (prize.type === "Rare") rarityClass = "rarity-rare";
+
+                    item.innerHTML = `
+                        <div class="flex items-center space-x-3 text-left">
+                            <div class="w-10 h-10 flex items-center justify-center text-2xl bg-rose-50 rounded-xl shrink-0">${prize.icon}</div>
+                            <div>
+                                <div class="font-bold text-gray-800 text-sm leading-tight">${prize.name}</div>
+                                <div class="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${rarityClass}">
+                                    ${prize.type}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-rose-500 font-bold text-sm bg-rose-50 w-8 h-8 rounded-full flex items-center justify-center border border-rose-100 shrink-0 ml-2">
+                            x${prize.count}
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+                
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.8 } });
+            }
+
+            screen.classList.remove('hidden');
+            screen.classList.add('flex');
+        }
+    </script>
+</body>
+</html>
