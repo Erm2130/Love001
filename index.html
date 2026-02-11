@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Surprise For My Love | Physics Edition</title>
+    <title>Surprise For My Love | Fix Click Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -13,155 +13,163 @@
             font-family: 'Prompt', sans-serif;
             background: #fffafa;
             overflow: hidden;
-            touch-action: manipulation;
+            /* ป้องกันการเลื่อนหรือซูมที่กวนใจการกด */
+            touch-action: none; 
         }
         .font-cute { font-family: 'Mali', cursive; }
         
         /* Gift Box */
-        .box-lid { transition: all 1s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .box-lid { transition: all 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .box-open .box-lid { 
-            transform: translateY(-400px) rotate(20deg); 
+            transform: translateY(-400px) rotate(25deg); 
             opacity: 0; 
         }
-        .box-body { transition: transform 0.5s; }
-        .box-open .box-body { transform: scale(1.05); }
+        .box-body { transition: transform 0.6s; }
+        .box-open .box-body { transform: scale(1.1); }
 
-        /* Floating Pop Text */
-        .pop-indicator {
-            position: fixed;
-            pointer-events: none;
-            z-index: 100;
-            font-weight: bold;
-            color: #ff4d6d;
-            animation: floatUpAndFade 1s forwards;
-        }
-
-        @keyframes floatUpAndFade {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-50px); opacity: 0; }
-        }
-
-        .summary-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(15px);
-            border: 2px solid #ffe4e6;
-            max-height: 90vh;
-        }
-
-        /* Rarity Styles */
-        .rarity-legendary { background: linear-gradient(to right, #f59e0b, #fbbf24); color: white; }
-        .rarity-rare { background: linear-gradient(to right, #8b5cf6, #a78bfa); color: white; }
-        .rarity-common { background: #f3f4f6; color: #6b7280; }
-        
-        /* Physics Elements */
+        /* Physics Elements (Hitbox Optimized) */
         .balloon-obj {
             position: absolute;
             will-change: transform;
-            z-index: 50;
+            /* สำคัญมาก: ต้องอยู่บนสุดและรับ event ได้ */
+            z-index: 999; 
             cursor: pointer;
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+            padding: 40px; /* พื้นที่กดที่มองไม่เห็นกว้างขึ้นอีก */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
         }
+
+        .balloon-visual {
+            pointer-events: none; /* ให้การกดทะลุไปที่ตัวพ่อที่มี hitbox ใหญ่ */
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15));
+        }
+
+        .pop-text {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            font-weight: bold;
+            animation: popUp 1s forwards;
+        }
+        @keyframes popUp {
+            0% { transform: translate(-50%, 0) scale(0.5); opacity: 1; }
+            100% { transform: translate(-50%, -80px) scale(1.2); opacity: 0; }
+        }
+
+        .summary-card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border: 2px solid #ffe4e6;
+        }
+
+        /* Rarity Badge Colors */
+        .badge-legendary { background: #f59e0b; color: white; }
+        .badge-rare { background: #8b5cf6; color: white; }
+        .badge-common { background: #94a3b8; color: white; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
 
     <!-- STEP 0: PASSCODE -->
-    <div id="step-0" class="fixed inset-0 z-[100] flex items-center justify-center bg-rose-500 transition-opacity duration-500">
+    <div id="step-0" class="fixed inset-0 z-[1100] flex items-center justify-center bg-rose-500 transition-opacity duration-500">
         <div class="text-center p-8 bg-white rounded-[2.5rem] shadow-2xl mx-4 animate__animated animate__zoomIn">
             <h2 class="text-rose-600 text-2xl font-bold mb-6 font-cute">รหัสผ่านยืนยันความรัก</h2>
             <input type="tel" maxlength="4" id="pin-input" class="w-full p-4 text-center text-3xl tracking-[0.5em] rounded-2xl bg-rose-50 border-2 border-rose-200 text-rose-600 font-bold mb-4 focus:outline-none" placeholder="****">
             <p class="text-rose-300 text-sm mb-6">คำใบ้: วันครบรอบ (เช่น 1402)</p>
-            <button onclick="checkPasscode()" class="w-full py-4 bg-rose-500 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-transform">เข้าสู่ระบบหัวใจ 🔓</button>
+            <button onclick="checkPasscode()" class="w-full py-4 bg-rose-500 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-transform">เปิดกล่องใจ 🔓</button>
         </div>
     </div>
 
-    <!-- STAGE AREA -->
-    <div id="main-stage" class="hidden flex-1 relative flex flex-col justify-end items-center pb-10">
-        <h2 id="top-msg" class="absolute top-20 text-rose-400 font-bold text-xl animate__animated animate__fadeIn">จิ้มลูกโป่งให้ทันนะ!</h2>
+    <!-- MAIN STAGE -->
+    <div id="main-stage" class="hidden flex-1 relative flex flex-col justify-end items-center pb-12">
+        <div id="top-instruction" class="absolute top-24 w-full text-center px-6 animate__animated animate__fadeIn">
+            <h2 class="text-rose-400 font-bold text-xl font-cute">จิ้มลูกโป่งให้แตกนะ! 🎈</h2>
+            <p class="text-rose-300 text-xs">รางวัลซ่อนอยู่ในนั้นเพียบเลย</p>
+        </div>
         
-        <!-- Bottom Gift Box -->
-        <div id="gift-container" class="relative z-20 cursor-pointer mb-4" onclick="burstBalloons()">
-            <div id="box-lid" class="box-lid relative z-30">
-                <div class="w-28 h-8 bg-rose-500 rounded-t-lg mx-auto border-b-2 border-rose-600 relative">
-                    <div class="absolute -top-4 left-1/2 -translate-x-1/2 flex">
-                        <div class="w-8 h-8 border-2 border-rose-400 rounded-full"></div>
-                        <div class="w-8 h-8 border-2 border-rose-400 rounded-full -ml-3"></div>
+        <!-- Gift Box at Bottom -->
+        <div id="gift-container" class="relative z-[100] cursor-pointer" onclick="burstBalloons()">
+            <div id="box-lid" class="box-lid relative z-[110]">
+                <div class="w-24 h-6 bg-rose-500 rounded-t-lg mx-auto border-b-2 border-rose-600 relative">
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 flex">
+                        <div class="w-6 h-6 border-2 border-rose-400 rounded-full"></div>
+                        <div class="w-6 h-6 border-2 border-rose-400 rounded-full -ml-2"></div>
                     </div>
                 </div>
             </div>
-            <div class="box-body w-28 h-28 bg-rose-600 rounded-b-lg shadow-2xl mx-auto flex items-center justify-center relative">
-                <div class="w-4 h-full bg-rose-400 absolute"></div>
-                <div class="h-4 w-full bg-rose-400 absolute"></div>
-                <span id="click-hint" class="text-white text-xs font-bold animate-pulse z-10 text-center">แตะเพื่อเปิด</span>
+            <div class="box-body w-24 h-24 bg-rose-600 rounded-b-lg shadow-2xl mx-auto flex items-center justify-center relative">
+                <div class="w-3 h-full bg-rose-400 absolute"></div>
+                <div class="h-3 w-full bg-rose-400 absolute"></div>
+                <span id="click-hint" class="text-white text-[10px] font-bold animate-pulse z-10">แตะเพื่อเปิด</span>
             </div>
         </div>
     </div>
 
-    <!-- BALLOON AREA -->
-    <div id="balloon-area" class="fixed inset-0 pointer-events-none"></div>
+    <!-- BALLOON LAYER (บนสุด) -->
+    <div id="balloon-area" class="fixed inset-0 pointer-events-none z-[999]"></div>
 
     <!-- SUMMARY SECTION -->
-    <div id="summary-screen" class="fixed inset-0 z-[150] hidden items-center justify-center bg-rose-100/80 backdrop-blur-md p-4">
-        <div class="summary-card w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl animate__animated animate__fadeInUp flex flex-col">
-            <div class="text-center mb-4 shrink-0">
-                <div class="text-4xl mb-1">🏆</div>
-                <h2 class="text-2xl font-bold text-gray-800 font-cute">สรุปรางวัลทั้งหมด</h2>
-                <p class="text-rose-400 text-sm">ระบบตรวจสอบความโชคดีเสร็จสิ้น!</p>
+    <div id="summary-screen" class="fixed inset-0 z-[2000] hidden items-center justify-center bg-rose-50/90 backdrop-blur-md p-4">
+        <div class="summary-card w-full max-w-sm rounded-[3rem] p-6 shadow-2xl animate__animated animate__fadeInUp flex flex-col">
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-2">🎉</div>
+                <h2 class="text-2xl font-bold text-gray-800 font-cute">ของรางวัลทั้งหมด</h2>
+                <p class="text-rose-400 text-sm italic">"เก็บไว้ทวงเค้าด้วยนะที่รัก"</p>
             </div>
             
-            <div id="prize-list" class="space-y-2 mb-6 overflow-y-auto pr-1">
-                <!-- Prizes will be listed here -->
+            <div id="prize-list" class="space-y-3 mb-8">
+                <!-- Prizes list -->
             </div>
 
-            <div class="text-center shrink-0 border-t pt-4">
-                <p class="text-gray-400 text-[10px] italic mb-4">สุ่มโดยระบบความรักอัตโนมัติ 100%</p>
-                <button onclick="location.reload()" class="w-full py-4 bg-rose-500 text-white font-bold rounded-2xl shadow-lg shadow-rose-200">เริ่มสุ่มใหม่ 💖</button>
-            </div>
+            <button onclick="location.reload()" class="w-full py-4 bg-rose-500 text-white font-bold rounded-2xl shadow-lg">เล่นใหม่อีกครั้ง 💖</button>
         </div>
     </div>
 
     <script>
         const PIN = "1402";
         let hasOpened = false;
-        let balloonsSpawned = 25;
+        let balloonsSpawned = 25; // เพิ่มจำนวนลูกโป่งให้เยอะขึ้น
         let balloonsProcessed = 0;
         let prizesWon = [];
         let activeBalloons = [];
 
         const prizePool = {
-            legendary: { name: "เงินสด 1,000 บาท", icon: "💰", chance: 0.03, type: "Legendary" },
+            legendary: { name: "เงินสด 1,000 บาท", icon: "💰", type: "Legendary", chance: 0.05 },
             rare: [
                 { name: "บุฟเฟต์ปิ้งย่าง", icon: "🥓", type: "Rare" },
-                { name: "ตั๋วหนัง 2 ที่นั่ง", icon: "🎬", type: "Rare" },
-                { name: "ตุ๊กตาหมีตัวใหญ่", icon: "🧸", type: "Rare" }
+                { name: "ตั๋วหนัง 2 ที่นั่ง", icon: "🎬", type: "Rare" }
             ],
             common: [
                 { name: "หอมแก้ม 1 ที", icon: "💋", type: "Common" },
                 { name: "นวดไหล่ 15 นาที", icon: "💆‍♀️", type: "Common" },
                 { name: "ตามใจ 1 วัน", icon: "👑", type: "Common" },
-                { name: "กอดแน่นๆ", icon: "🫂", type: "Common" },
-                { name: "พาไปกินของอร่อย", icon: "🍦", type: "Common" }
-            ]
+                { name: "กอดแน่นๆ", icon: "🫂", type: "Common" }
+            ],
+            empty: { name: "เกลือ", icon: "🧂", type: "Empty" }
         };
 
+        // Physics: Super Smooth & Slow
+        const GRAVITY = -0.012; // ลอยขึ้นช้าลงมากกก
+        const FRICTION = 0.98; 
+        const BOUNCE = 0.8;
+        const EMPTY_CHANCE = 0.45; // โอกาสสุ่มเกลือ 45%
+
         function checkPasscode() {
-            const val = document.getElementById('pin-input').value;
-            if(val === PIN) {
-                document.getElementById('step-0').classList.add('opacity-0');
+            const input = document.getElementById('pin-input').value;
+            if(input === PIN) {
+                document.getElementById('step-0').style.opacity = '0';
                 setTimeout(() => {
                     document.getElementById('step-0').style.display = 'none';
                     document.getElementById('main-stage').classList.remove('hidden');
                 }, 500);
             } else {
                 document.getElementById('pin-input').value = '';
-                document.getElementById('pin-input').placeholder = "รหัสผิด!";
+                document.getElementById('pin-input').placeholder = "รหัสผิดนะจ๊ะ";
             }
         }
-
-        // Physics Constants
-        const GRAVITY = -0.05; // Negative to float up
-        const FRICTION = 0.985;
-        const BOUNCE = 0.7;
 
         function burstBalloons() {
             if(hasOpened) return;
@@ -169,14 +177,14 @@
 
             document.getElementById('gift-container').classList.add('box-open');
             document.getElementById('click-hint').style.display = 'none';
-            document.getElementById('top-msg').innerText = "กดแตกให้ได้เยอะที่สุด!";
 
             const colors = ['#ff4d6d', '#ff758f', '#ffb3c1', '#74c0fc', '#ffea00', '#63e6be', '#b197fc'];
             
+            // ปล่อยลูกโป่งห่างกันทีละนิด (300ms) เพื่อให้ไม่ตาลาย
             for(let i=0; i<balloonsSpawned; i++) {
                 setTimeout(() => {
                     spawnBalloon(colors[i % colors.length]);
-                }, i * 150);
+                }, i * 300);
             }
 
             requestAnimationFrame(updatePhysics);
@@ -184,16 +192,20 @@
 
         function spawnBalloon(color) {
             const bEl = document.createElement('div');
-            bEl.className = 'balloon-obj pointer-events-auto';
+            bEl.className = 'balloon-obj';
+            
             bEl.innerHTML = `
-                <svg width="60" height="80" viewBox="0 0 60 80">
-                    <ellipse cx="30" cy="30" rx="28" ry="32" fill="${color}" />
-                    <path d="M30 62 L30 80" stroke="#ccc" stroke-width="1" />
-                    <polygon points="30,62 27,65 33,65" fill="${color}" />
-                </svg>
+                <div class="balloon-visual">
+                    <svg width="60" height="80" viewBox="0 0 60 80">
+                        <ellipse cx="30" cy="30" rx="28" ry="32" fill="${color}" />
+                        <path d="M30 62 L30 80" stroke="#ccc" stroke-width="1.5" />
+                        <polygon points="30,62 26,67 34,67" fill="${color}" />
+                        <ellipse cx="20" cy="20" rx="5" ry="8" fill="white" fill-opacity="0.3" />
+                    </svg>
+                </div>
             `;
             
-            const startX = window.innerWidth / 2 - 30;
+            const startX = window.innerWidth / 2 - 70; // Center with wide hitbox
             const startY = window.innerHeight - 150;
             
             document.getElementById('balloon-area').appendChild(bEl);
@@ -202,48 +214,52 @@
                 el: bEl,
                 x: startX,
                 y: startY,
-                vx: (Math.random() - 0.5) * 15, // Burst power
-                vy: -Math.random() * 10 - 5,
-                width: 60,
-                height: 80,
-                color: color,
+                vx: (Math.random() - 0.5) * 6, // ลดแรงดีดข้าง
+                vy: -Math.random() * 4 - 1.5,   // ลอยขึ้นนิ่งๆ
+                width: 140, // Hitbox ใหญ่มากเพื่อให้กดโดนง่าย
+                height: 160,
                 isPopped: false,
                 wobble: Math.random() * Math.PI * 2
             };
 
-            bEl.onclick = (e) => pop(bObj, e);
+            const handleInteraction = (e) => {
+                // สำหรับมือถือเราจะไม่หยุด preventDefault เพื่อให้ปุ่มยังรับ event ได้ปกติ
+                const touch = e.touches ? e.touches[0] : e;
+                pop(bObj, touch);
+            };
+
+            bEl.addEventListener('touchstart', handleInteraction);
+            bEl.addEventListener('mousedown', handleInteraction);
+            
             activeBalloons.push(bObj);
         }
 
         function updatePhysics() {
             const screenWidth = window.innerWidth;
             
-            activeBalloons.forEach((b, index) => {
+            activeBalloons.forEach((b) => {
                 if(b.isPopped) return;
 
-                // Physics logic
                 b.vy += GRAVITY;
                 b.vx *= FRICTION;
                 
-                // Floating wobble
-                b.wobble += 0.05;
-                b.x += b.vx + Math.sin(b.wobble) * 0.5;
+                b.wobble += 0.02;
+                b.x += b.vx + Math.sin(b.wobble) * 0.3;
                 b.y += b.vy;
 
-                // Wall Collision
-                if (b.x <= 0) {
-                    b.x = 0;
+                // ชนขอบเด้งดึ๋ง
+                if (b.x <= -20) {
+                    b.x = -20;
                     b.vx = -b.vx * BOUNCE;
-                } else if (b.x + b.width >= screenWidth) {
-                    b.x = screenWidth - b.width;
+                } else if (b.x + b.width >= screenWidth + 20) {
+                    b.x = screenWidth + 20 - b.width;
                     b.vx = -b.vx * BOUNCE;
                 }
 
-                // Apply to DOM
                 b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
 
-                // Out of screen (top)
-                if (b.y < -150) {
+                // พ้นขอบบน
+                if (b.y < -200) {
                     b.isPopped = true;
                     b.el.remove();
                     countProcessed();
@@ -255,34 +271,46 @@
             }
         }
 
-        function pop(bObj, event) {
+        function pop(bObj, pos) {
             if(bObj.isPopped) return;
             bObj.isPopped = true;
             bObj.el.style.pointerEvents = 'none';
             
             const rand = Math.random();
-            let prize;
-            if(rand < prizePool.legendary.chance) {
-                prize = prizePool.legendary;
-                confetti({ particleCount: 40, spread: 50, origin: { x: event.clientX/window.innerWidth, y: event.clientY/window.innerHeight } });
-            } else if(rand < 0.20) {
-                prize = prizePool.rare[Math.floor(Math.random()*prizePool.rare.length)];
+            let prize = null;
+            let rarity = "Common";
+
+            if (rand < EMPTY_CHANCE) {
+                prize = prizePool.empty;
+                rarity = "Empty";
             } else {
-                prize = prizePool.common[Math.floor(Math.random()*prizePool.common.length)];
+                const pRand = Math.random();
+                if(pRand < prizePool.legendary.chance) {
+                    prize = prizePool.legendary;
+                    rarity = "Legendary";
+                    confetti({ particleCount: 60, spread: 70, origin: { x: pos.clientX/window.innerWidth, y: pos.clientY/window.innerHeight } });
+                } else if(pRand < 0.25) {
+                    prize = prizePool.rare[Math.floor(Math.random()*prizePool.rare.length)];
+                    rarity = "Rare";
+                } else {
+                    prize = prizePool.common[Math.floor(Math.random()*prizePool.common.length)];
+                    rarity = "Common";
+                }
+                prizesWon.push(prize);
             }
 
-            prizesWon.push(prize);
+            // แสดง Pop Message เล็กๆ
+            const msg = document.createElement('div');
+            msg.className = 'pop-text font-bold text-center';
+            msg.style.left = pos.clientX + 'px';
+            msg.style.top = pos.clientY + 'px';
+            msg.style.color = rarity === "Empty" ? "#94a3b8" : "#ff4d6d";
+            msg.innerHTML = `<div class="text-2xl">${prize.icon}</div><div class="text-[10px]">${rarity === "Empty" ? 'เกลือจ้า' : '+1'}</div>`;
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 1000);
 
-            // Mini Pop Indicator
-            const indicator = document.createElement('div');
-            indicator.className = 'pop-indicator';
-            indicator.style.left = event.clientX + 'px';
-            indicator.style.top = event.clientY + 'px';
-            indicator.innerHTML = `<span class="text-xl">${prize.icon}</span>`;
-            document.body.appendChild(indicator);
-            setTimeout(() => indicator.remove(), 1000);
-
-            bObj.el.innerHTML = '<span class="text-3xl animate__animated animate__zoomOut">💥</span>';
+            // เอฟเฟกต์ภาพแตก
+            bObj.el.innerHTML = '<span class="text-4xl animate__animated animate__zoomOut">💥</span>';
             setTimeout(() => {
                 bObj.el.remove();
                 countProcessed();
@@ -292,7 +320,7 @@
         function countProcessed() {
             balloonsProcessed++;
             if(balloonsProcessed >= balloonsSpawned) {
-                setTimeout(showSummary, 1200);
+                setTimeout(showSummary, 1500);
             }
         }
 
@@ -302,47 +330,41 @@
             list.innerHTML = "";
 
             if(prizesWon.length === 0) {
-                list.innerHTML = `<p class="text-center text-gray-400 py-10 font-cute">จิ้มไม่ทันเลยหรอเนี่ย! 🥺</p>`;
+                list.innerHTML = `<p class="text-center text-gray-400 py-10 font-cute">จิ้มไม่ทันซักลูกเลยหรอเนี่ย! 🥺<br>ลองกดใหม่สิ เค้าลดความเร็วให้แล้วนะ</p>`;
             } else {
                 const summary = prizesWon.reduce((acc, curr) => {
-                    if (!acc[curr.name]) {
-                        acc[curr.name] = { ...curr, count: 0 };
-                    }
+                    if (!acc[curr.name]) acc[curr.name] = { ...curr, count: 0 };
                     acc[curr.name].count++;
                     return acc;
                 }, {});
 
-                const sortedPrizes = Object.values(summary).sort((a, b) => {
+                const sorted = Object.values(summary).sort((a, b) => {
                     const order = { "Legendary": 1, "Rare": 2, "Common": 3 };
                     return order[a.type] - order[b.type];
                 });
 
-                sortedPrizes.forEach(prize => {
-                    const item = document.createElement('div');
-                    item.className = "flex items-center justify-between p-3 bg-white rounded-2xl border border-gray-100 shadow-sm transition-transform active:scale-95";
+                sorted.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = "flex items-center justify-between p-3 bg-white rounded-2xl border border-rose-100 shadow-sm";
                     
-                    let rarityClass = "rarity-common";
-                    if (prize.type === "Legendary") rarityClass = "rarity-legendary";
-                    if (prize.type === "Rare") rarityClass = "rarity-rare";
+                    let badgeClass = "badge-common";
+                    if(p.type === "Legendary") badgeClass = "badge-legendary";
+                    if(p.type === "Rare") badgeClass = "badge-rare";
 
-                    item.innerHTML = `
-                        <div class="flex items-center space-x-3 text-left">
-                            <div class="w-10 h-10 flex items-center justify-center text-2xl bg-rose-50 rounded-xl shrink-0">${prize.icon}</div>
+                    div.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <div class="text-2xl w-10 h-10 flex items-center justify-center bg-rose-50 rounded-xl">${p.icon}</div>
                             <div>
-                                <div class="font-bold text-gray-800 text-sm leading-tight">${prize.name}</div>
-                                <div class="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${rarityClass}">
-                                    ${prize.type}
-                                </div>
+                                <div class="font-bold text-gray-800 text-sm">${p.name}</div>
+                                <div class="text-[8px] uppercase font-bold px-2 py-0.5 rounded-full inline-block ${badgeClass}">${p.type}</div>
                             </div>
                         </div>
-                        <div class="text-rose-500 font-bold text-sm bg-rose-50 w-8 h-8 rounded-full flex items-center justify-center border border-rose-100 shrink-0 ml-2">
-                            x${prize.count}
-                        </div>
+                        <div class="bg-rose-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs">x${p.count}</div>
                     `;
-                    list.appendChild(item);
+                    list.appendChild(div);
                 });
                 
-                confetti({ particleCount: 150, spread: 70, origin: { y: 0.8 } });
+                confetti({ particleCount: 200, spread: 80, origin: { y: 0.7 } });
             }
 
             screen.classList.remove('hidden');
